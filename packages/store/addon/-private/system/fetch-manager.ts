@@ -9,7 +9,6 @@ import { serializerForAdapter } from './store/serializers';
 import { InvalidError } from '@ember-data/adapter/error';
 import coerceId from './coerce-id';
 import { A } from '@ember/array';
-
 import { _findHasMany, _findBelongsTo, _findAll, _query, _queryRecord } from './store/finders';
 import RequestCache from './request-cache';
 import { CollectionResourceDocument, SingleResourceDocument } from '../ts-interfaces/ember-data-json-api';
@@ -19,6 +18,7 @@ import { symbol } from '../ts-interfaces/utils/symbol';
 import Store from './ds-model-store';
 import recordDataFor from './record-data-for';
 import CoreStore from './core-store';
+import { errorsArrayToHash } from './errors-utils';
 
 function payloadIsNotBlank(adapterPayload): boolean {
   if (Array.isArray(adapterPayload)) {
@@ -136,7 +136,14 @@ export default class FetchManager {
       },
       function(error) {
         if (error instanceof InvalidError) {
-          let parsedErrors = serializer.extractErrors(store, modelClass, error, snapshot.id);
+          let parsedErrors = error.errors;
+
+          if (typeof serializer.extractErrors === 'function') {
+            parsedErrors = serializer.extractErrors(store, modelClass, error, snapshot.id);
+          } else {
+            parsedErrors = errorsArrayToHash(error.errors);
+          }
+
           throw { error, parsedErrors };
         } else {
           throw { error };
